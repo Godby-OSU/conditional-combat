@@ -35,20 +35,6 @@ enemy_info = {
 
 #####
 # Funtions to create enemy and ally units.
-def create_unit(dictionary, key):
-    """This function is outdated and needs to be deleted once dependencies are cleared"""
-    value = dictionary[key][0]
-    name = dictionary[key][1]
-    img = dictionary[key][2]
-    hp = dictionary[key][3]
-    dmg = dictionary[key][4]
-    type = dictionary[key][5]
-    faction = dictionary[key][6]
-    aoe = dictionary[key][7]
-
-    return Unit(value, name, img, hp, dmg, type, faction, aoe)
-
-
 def create_friendly(key):
     name = friendly_info[key]["name"]
     img = friendly_info[key]["img"]
@@ -125,6 +111,12 @@ class Friendly_Unit(Unit):
         else:
             print("Area of effect is off")
             self._aoe = False
+
+    def get_damage(self):
+        if self._aoe:
+            return int(self._damage/2)
+        else:
+            return self._damage
         
 
 class Enemy_Unit(Unit):

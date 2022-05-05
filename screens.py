@@ -5,7 +5,7 @@
 Includes information required to manage visuals active on the current screen.
 """
 import sys_info as sys
-import screen_sprites as ss  
+import screen_sprites as ss
 
 class Screens:
     """This class should do NOTHING except hold info for what is on each screen and load that info."""
@@ -65,6 +65,8 @@ class Screens:
 
     def add_unit_battle(self, unit, size, coords):
         """Takes unit info and generates a visual sprite from it."""
+        print(unit)
+        print("HI, my name is", unit.get_name())
         unit.set_sprite(ss.Screen_Sprite(unit.get_name(), size, coords))
         self._battle_sprites.append(unit.get_sprite())
         print("Unit added to battle screen.")
@@ -84,6 +86,8 @@ class Screens:
         if self._update is True:
             self._update is False
             self.load_battle()
+
+
 
 
 # TO:DO Have a variable to track which screen is active.  The update function will use that variable to

@@ -41,7 +41,10 @@ class Game():
                     pygame.quit()
 
             # Update sprites
-            self.battle.update()
+            self.battle.run_round()
+
+
+            
             mouse_position = pygame.mouse.get_pos()
             self.all.clear(self.screen, self.background)
             self.all.update(mouse_position, pressed)

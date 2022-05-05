@@ -1,5 +1,5 @@
 from screens import Screens
-from units import create_enemy
+from units import create_enemy, Unit, Friendly_Unit
 import time
 
 class Battle():
@@ -11,6 +11,7 @@ class Battle():
         self._inactive_enemies = []
         self._combat = False
         self._round = 1
+        self._wait = 1
 
     def add_friendly(self, unit):
         self._friendly_units.append(unit)
@@ -59,69 +60,74 @@ class Battle():
     def set_round(self, round):
         self._round = round
 
-    def update(self):
-        if self._combat:
-            self._inactive_enemies = [] # Clear this out because we have max of 4 at the moment
-            wait = 1.5
-            print("There are", len(self._active_enemies), "here,")
-            print("and", len(self._inactive_enemies), "waiting.")
-            for unit in self._friendly_units:
-                aoe = unit.get_aoe()
-                damage = unit.get_damage()
-                if aoe is True:
-                    damage = int(damage/2)
-                    print("Attacking multi targets.")
-                    for enemy in self._active_enemies:
-                        enemy.take_damage(int(damage))
-                        print(enemy.get_name(), "takes", damage, "damage.")
-                        time.sleep(wait)
+    def process_damage(self, attacker: Unit, target: Unit):
+        """Applies damage from attacker to the target."""
+        print("Attacking", target.get_name())
+        time.sleep(self._wait)
+        damage = attacker.get_damage()
+        target.take_damage(damage)
+        print(target.get_name(), "takes", damage, "damage.")
+        time.sleep(self._wait)
 
-                    dead_units = []
-                    for enemy in self._active_enemies:
-                        if enemy.check_pulse() is False:
-                            print(enemy.get_name(), "goes down.")
-                            dead_units.append(enemy)
-                            time.sleep(wait)
-                    for enemy in dead_units:
-                        self._active_enemies.remove(enemy)
-                        self._screen.remove_battle(enemy)
-                else:
-                    print("Attacking single target.")
-                    enemy = self._active_enemies[0]
-                    enemy.take_damage(damage)
-                    print(enemy.get_name(), "takes", damage, "damage.")
-                    time.sleep(wait)
-                    if enemy.check_pulse() == False:
-                        print(enemy.get_name(), "goes down.")
-                        time.sleep(wait)
-                        self._active_enemies.remove(enemy)
-                        self._screen.remove_battle(enemy)
-
-                if len(self._active_enemies) == 0 and len(self._inactive_enemies) == 0:
-                    print("Round Over")
-                    time.sleep(wait)
-                    self._combat = False
-                    self._round += 1
-                    self._screen.load_selection()
-
-            for enemy in self._active_enemies:
-                damage = enemy.get_damage()
-                print(enemy.get_name(), "attacking", self._friendly_units[0].get_name())
-                time.sleep(wait)
-                self._friendly_units[0].take_damage(damage)
-                print(self._friendly_units[0].get_name(), "takes", damage, "damage.")
-                time.sleep(wait)
-            
-            print(self._friendly_units[0].get_health(), "health remaining")
-            time.sleep(wait)
-            
-            if self._friendly_units[0].check_pulse() == False:
+    def process_death(self, target: Unit, enemy: bool):
+        """ Checks if unit has been defeated.  
+        Removes defeated enemy unit.  Game Over if ally defeated."""
+        if not target.check_pulse():
+            print(target.get_name(), "goes down.")
+            time.sleep(self._wait)
+            if enemy:
+                self._active_enemies.remove(target)
+                self._screen.remove_battle(target)
+            else:
                 print("Game Over")
                 self._combat = False
                 self._screen.load_menu()
 
+    def process_attack(self, attacker: Unit):
+        """Processing the attack phase for a single unit regardless of faction."""
+        # Determine if friendly or enemy unit attacking.
+        targets = self._friendly_units
+        aoe = False
+        enemy_bool = False
+        if isinstance(attacker, Friendly_Unit):
+            aoe = attacker.get_aoe()  # Only friendly units have aoe currently. 
+            targets = self._active_enemies
+            enemy_bool = True
+
+        # Process the damage and check if target still alive
+        if aoe:
+            print("Attacking multiple targets...")
+            for target in targets:
+                self.process_damage(attacker, target)
+                self.process_death(target, enemy_bool)       
+        else:
+            target = targets[0]
+            self.process_damage(attacker, target)
+            self.process_death(target, enemy_bool)    
+
+    def run_round(self):
+        """Processes an entire round of combat."""
+        if self._combat:
+            print("=======================")
+            print("There are", len(self._active_enemies), "here,")
+            print("and", len(self._inactive_enemies), "in reserve.")
+            print(self._friendly_units[0].get_health(), "health remaining")
+            print("=======================")
 
 
+            for unit in self._friendly_units:
+                self.process_attack(unit)
+                print("")
+            for unit in self._active_enemies:
+                self.process_attack(unit)
+                print("")
 
+            if len(self._active_enemies) == 0 and len(self._inactive_enemies) == 0:
+                print("Round Over")
+                time.sleep(self._wait)
+                self._round += 1
+                self._combat = False
+                self._screen.load_selection()
 
-            
+            if self._combat:
+                time.sleep(self._wait)
