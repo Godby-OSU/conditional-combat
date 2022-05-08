@@ -1,6 +1,7 @@
 from screens import Screens
 from units import create_enemy, Unit, Friendly_Unit
 import time
+import json
 
 class Battle():
     """Tracks data from battle and updates the screen with new info."""
@@ -36,11 +37,11 @@ class Battle():
         pos_y = 0
 
         for unit in self._active_enemies:
-            self._screen.add_unit_battle(unit, (unit_x,unit_y), (pos_x,pos_y))
+            self._screen.create_and_add_sprite(unit, (unit_x,unit_y), (pos_x,pos_y))
             pos_x += unit_x
 
         for unit in self._friendly_units:
-            self._screen.add_unit_battle(unit, (unit_x, unit_y), (500,300))
+            self._screen.create_and_add_sprite(unit, (unit_x, unit_y), (500,300))
 
         print("Completed: adding sprites to battle screen.")
 
@@ -54,11 +55,22 @@ class Battle():
             del self._inactive_enemies[0]
             num_enemies += 1
         self.update_screen()
-        self._screen.load_battle()
+        self._screen.load_screen("battle")
         self._combat = True
     
     def set_round(self, round):
         self._round = round
+
+    def create_json(self):
+        print("Please enter name")
+        name = input()
+        data = {
+        'name': name,
+        'round': self._round }
+        with open('gameover.json', 'w') as test:
+            json.dump(data, test)
+
+
 
     def process_damage(self, attacker: Unit, target: Unit):
         """Applies damage from attacker to the target."""
@@ -77,11 +89,12 @@ class Battle():
             time.sleep(self._wait)
             if enemy:
                 self._active_enemies.remove(target)
-                self._screen.remove_battle(target)
+                self._screen.remove_sprite(target)
             else:
                 print("Game Over")
+                self.create_json()
                 self._combat = False
-                self._screen.load_menu()
+                self._screen.load_screen("menu")
 
     def process_attack(self, attacker: Unit):
         """Processing the attack phase for a single unit regardless of faction."""
@@ -127,7 +140,7 @@ class Battle():
                 time.sleep(self._wait)
                 self._round += 1
                 self._combat = False
-                self._screen.load_selection()
+                self._screen.load_screen("selection")
 
             if self._combat:
                 time.sleep(self._wait)

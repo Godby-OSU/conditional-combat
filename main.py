@@ -1,37 +1,28 @@
 import pygame
 # from images import Image_Collection as img_col
 import sys_info as sys
-from units import create_friendly
 
 
 class Game():
     def __init__(self):
+        # Start Pygame Window
         pygame.init()
-        self.screen = pygame.display.set_mode((sys.screen_x, sys.screen_y))
-        import screens as display
-        import screen_sprites as ss
-        from battle import Battle
-        self.clock = pygame.time.Clock()
-        self.background = pygame.Surface((sys.screen_x, sys.screen_y))  # Blank background to clear objects
+        self.display = pygame.display.set_mode((sys.screen_x, sys.screen_y))
         pygame.display.set_caption(sys.caption)
 
-        self.all = pygame.sprite.RenderUpdates()
-        self.display = display.Screens(self.all)
-        self.battle = Battle(self.display)
-        self.display.set_function("battle_on", self.battle.start_combat)
-
-        # Create and store ally unit
-        primary_unit = create_friendly("wizard")
-        self.display.add_unit_selection(primary_unit, (200,200), (0,0))
-        self.battle.add_friendly(primary_unit)
-        self.display.set_function("aoe_on", primary_unit.toggle_aoe)
-
-        # Load main menu
-        self.display.load_menu()
-        self.round = 1 
+        # Load Graphical Windows
+        import screens  # This should go at top but current produces error if called before display init
+        import battle
+        self.screen = screens.Screens(self.display)
+        self.windows = screens.Objects(self.screen)
+        self.screen.update_windows(self.windows)
+        self.screen.load_screen("menu")
+        self.battle = battle.Battle(self.screen)
+        self.windows.selection[0].set_function(lambda: self.battle.start_combat())
+        self.battle.add_friendly(self.windows.primary_unit)  # This should not happen here
+        self.clock = pygame.time.Clock()
 
     def run(self):
-
         while True:
             pressed = False
             for event in pygame.event.get():
@@ -40,16 +31,12 @@ class Game():
                 if event.type == pygame.QUIT:
                     pygame.quit()
 
-            # Update sprites
+            # Run Combat
             self.battle.run_round()
 
-
-            
-            mouse_position = pygame.mouse.get_pos()
-            self.all.clear(self.screen, self.background)
-            self.all.update(mouse_position, pressed)
-            dirty = self.all.draw(self.screen)
-            pygame.display.update(dirty)
+            # Update sprites
+            self.screen.mouse_updates(pressed)
+            self.screen.update()
 
             self.clock.tick(sys.fps)
 
