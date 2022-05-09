@@ -33,7 +33,7 @@ class Objects:
         }
 
         self.primary_unit = create_friendly("wizard")
-        sprite = ss.Screen_Sprite("wizard", (200,200), (50,50))
+        sprite = ss.Screen_Sprite("wizard", (200,200), (250,200))
         self.primary_unit.set_sprite(sprite)
         self.selection.append(sprite)
 
@@ -58,7 +58,6 @@ class Screens:
     def update(self):
         """Calls an update to screen visuals with no required input."""
         self._rendered_group.clear(self._display, self._background)
-        #self._rendered_group.update((-1, -1), False)  # Create a seperate update function for mouse input.  Call this and just this in main loop.
         group = self._rendered_group.draw(self._display)
         pygame.display.update(group)
 
@@ -72,7 +71,7 @@ class Screens:
         """Add a singular sprite to the current list of active sprites."""
         self._rendered_group.add(sprite)
 
-    def create_and_add_sprite(self, unit, size, pos):
+    def create_sprite(self, unit, size, pos):
         """Creates a sprite then adds it to list of active sprites"""
         unit.set_sprite(ss.Screen_Sprite(unit.get_name(), size, pos))
         self.add_sprite(unit.get_sprite())

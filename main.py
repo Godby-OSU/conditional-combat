@@ -40,8 +40,6 @@ class Game():
 
             self.clock.tick(sys.fps)
 
-
-
 def main():
     game = Game()
     while True:

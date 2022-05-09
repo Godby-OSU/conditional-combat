@@ -27,6 +27,9 @@ class Screen_Sprite(pg.sprite.Sprite):
 
     def get_name(self):
         return self._name
+
+    def set_pos(self, pos):
+        self._coords = pos
         
         
 class Button(Screen_Sprite):

@@ -21,7 +21,7 @@ class Battle():
         self._inactive_enemies.append(unit)
 
     def generate_enemies(self):
-        """Creates enemy units"""
+        """Creates enemy units for current encounter."""
         print("Generating Enemies")
         remaining_points = self._round
         while remaining_points > 0:
@@ -30,6 +30,7 @@ class Battle():
         print("Generation completed.")
 
     def update_screen(self):
+        """Adds units to the display."""
         print("Updating sprites list")
         unit_x = 200
         unit_y = 200
@@ -37,11 +38,16 @@ class Battle():
         pos_y = 0
 
         for unit in self._active_enemies:
-            self._screen.create_and_add_sprite(unit, (unit_x,unit_y), (pos_x,pos_y))
+            self._screen.create_sprite(unit, (unit_x,unit_y), (pos_x,pos_y))
+            print("UNIT ADDED")
             pos_x += unit_x
 
         for unit in self._friendly_units:
-            self._screen.create_and_add_sprite(unit, (unit_x, unit_y), (500,300))
+            # self._screen.create_sprite(unit, (unit_x, unit_y), (500,300))
+            # This function is not working.  Not worth fixing because 
+            # Sprites need refactored entirely anyway.
+            sprite = unit.get_sprite()
+            sprite.set_pos((500,300))
 
         print("Completed: adding sprites to battle screen.")
 
@@ -50,12 +56,11 @@ class Battle():
         self.generate_enemies()  # Create enemies in inactive list
         num_enemies = 0
         while num_enemies != 4 and len(self._inactive_enemies) != 0:  # Move up to 4 of those enemies into active
-
             self._active_enemies.append(self._inactive_enemies[0])
             del self._inactive_enemies[0]
             num_enemies += 1
-        self.update_screen()
-        self._screen.load_screen("battle")
+        self._screen.load_screen("battle")      # This clears screen
+        self.update_screen()                    # This adds to screen after it is cleared
         self._combat = True
     
     def set_round(self, round):
