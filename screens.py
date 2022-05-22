@@ -5,86 +5,117 @@
 Includes information required to manage visuals active on the current screen.
 """
 import sys_info as sys
-import screen_sprites as ss  
+import screen_sprites as ss
+import pygame
+import json
+from units import create_friendly
+
+class Objects:
+    """"""
+    def __init__(self, screen):
+        self._screen = screen
+        self.selection = [           
+            ss.Button(("battle_on", "battle_off"), (400,150), (int(sys.screen_x-400),int(sys.screen_y-150))),
+            ss.Toggle_Button(("aoe_on", "aoe_off"), (200,75), (250,100))]
+        self.guide = [
+            ss.Screen_Sprite(("guide_info"), (sys.screen_x, sys.screen_y), (0,0)),
+            ss.Button(("close", "close"), (100,100), (sys.screen_x-100,0), lambda: screen.load_screen("menu"))]
+        self.menu = [
+            ss.Screen_Sprite("title", (sys.screen_x,200),(0,0)),
+            ss.Button(("start_on", "start_off"), (400,150),(int(sys.screen_x/2-200),200),  lambda: screen.load_screen("selection")),            
+            ss.Button(("guide_on", "guide_off"), (200,75), (int(sys.screen_x-200),int(sys.screen_y-75)), lambda: screen.load_screen("guide")), 
+            ss.Button(("scores_off", "scores_on"), (400,150), (int(sys.screen_x/2-200),350), lambda: self.update_highscores())]      
+        self.highscores = [
+            ss.Button(("close", "close"), (100,100), (sys.screen_x-100,0), lambda: screen.load_screen("menu")),
+            ss.Text("1.)",  50, (255,115,0), (50, 50)),
+            ss.Text("2.)",  50, (255,115,0), (50, 100)),
+            ss.Text("3.)",  50, (255,115,0), (50, 150)),
+            ss.Text("4.)",  50, (255,115,0), (50, 200)),
+            ss.Text("5.)",  50, (255,115,0), (50, 250))]
+        
+        self.battle =[]  
+
+        self.windows = {
+            "selection": self.selection,
+            "guide": self.guide,
+            "menu": self.menu,
+            "battle": self.battle,
+            "highscores": self.highscores
+        }
+
+        self.primary_unit = create_friendly("wizard")
+        sprite = ss.Screen_Sprite("wizard", (200,200), (250,200))
+        self.primary_unit.set_sprite(sprite)
+        self.selection.append(sprite)
+
+        self.battle.append(self.primary_unit.get_sprite())
+        self.selection[1].set_function(self.primary_unit.toggle_aoe)
+
+    def update_highscores(self):
+        """Uses JSON file to generate a list of highscores."""
+        # Access JSON
+        with open('highscores.json', 'r') as read:
+            data = json.load(read)
+
+        # Update Highscores Table
+        for n in range(1,6):
+            try:
+                new_text = (n, '.)', ' ', data[str(n)][0], '  ---', ' ', 'Round: ', data[str(n)][1])
+                string = ''.join(map(str, new_text))    # https://www.geeksforgeeks.org/python-program-to-convert-a-tuple-to-a-string/
+                print(string)
+                self.highscores[n].change_text(string)
+            except:
+                pass
+
+        # Display the table
+        self._screen.load_screen("highscores")
+
 
 class Screens:
-    """This class should do NOTHING except hold info for what is on each screen and load that info."""
-    def __init__(self, sprite_group):
-        self._sprite_group = sprite_group
-        self._selection_sprites = [
-           ss.Button(("battle_on", "battle_off"), (400,150), (int(sys.screen_x-400),int(sys.screen_y-150))),
-           ss.Toggle_Button(("aoe_on", "aoe_off"), (200,75), (250,100))
-
-        ]
-        self._menu_sprites = [
-            #ss.Text("Version 0", 30, sys.white, (900,470)),
-            ss.Screen_Sprite("title", (sys.screen_x,200),(0,0)),
-            ss.Button(("start_on", "start_off"), (400,150),(int(sys.screen_x/2-200),200),  self.load_selection),            
-            ss.Button(("guide_on", "guide_off"), (400,150), (int(sys.screen_x/2-200),350), self.load_guide)  
-        ]          
-
-        self._battle_sprites = []  
-
-        self._guide_sprites = [
-            ss.Screen_Sprite(("guide_info"), (sys.screen_x, sys.screen_y), (0,0)),
-            ss.Button(("close", "close"), (100,100), (sys.screen_x-100,0), self.load_menu)
-        ]
-
-        self._update = False
-
-    def load_screen(self, screen_sprites):
-        """Input the screen that you're adding the sprites to.
-        Returns sprite list with all those sprites added."""
-        self._sprite_group.empty()
-        for sprite in screen_sprites:
-            self._sprite_group.add(sprite)
-        return self._sprite_group
-
-    def load_menu(self):
-        print("LOADING MENU")
-        self.load_screen(self._menu_sprites)
-
-    def load_selection(self):
-        print("LOADING SELECTION")
-        self.load_screen(self._selection_sprites)
-        self._update = False
-
-    def load_battle(self):
-        print("LOADING BATTLE")
-        self.load_screen(self._battle_sprites)
-
-    def load_guide(self):
-        print("LOADING GUIDE")
-        self.load_screen(self._guide_sprites)
-
-    def set_function(self, name, function):
-        for sprite in self._selection_sprites:
-            if sprite.get_name() == name:
-                sprite.set_function(function)
+    def __init__(self, display):
+        self._rendered_group = pygame.sprite.RenderUpdates()
+        self._display = display
+        self._background = pygame.Surface((sys.screen_x, sys.screen_y))
+        self._windows = dict()
 
 
-    def add_unit_battle(self, unit, size, coords):
-        """Takes unit info and generates a visual sprite from it."""
-        unit.set_sprite(ss.Screen_Sprite(unit.get_name(), size, coords))
-        self._battle_sprites.append(unit.get_sprite())
-        print("Unit added to battle screen.")
-
-    def add_unit_selection(self, unit, size, coords):
-        unit.set_sprite(ss.Screen_Sprite(unit.get_name(), size, coords))
-        self._selection_sprites.append(unit.get_sprite())
-        
-    def remove_battle(self, deleted_sprite):
-        """Removes a sprite from the battle sprite list"""
-        print("Removing from battle...")
-        self._battle_sprites.remove(deleted_sprite.get_sprite())
-        self.load_battle()
+    def update_windows(self, objects: Objects):
+        """Updates the dictionary of window objects."""
+        print("WE ARE USING THIS LIST")
+        print(objects)
+        self._windows = objects.windows
 
     def update(self):
-        """Change this so that battle is not explicitly hardcoded."""
-        if self._update is True:
-            self._update is False
-            self.load_battle()
+        """Calls an update to screen visuals with no required input."""
+        self._rendered_group.clear(self._display, self._background)
+        group = self._rendered_group.draw(self._display)
+        pygame.display.update(group)
 
+    def mouse_updates(self, pressed: bool):
+        """Updates screen visuals based on mouse position and status.
+        Intended for main loop where events are processed."""
+        mouse_pos = pygame.mouse.get_pos()
+        self._rendered_group.update((mouse_pos), pressed)
 
-# TO:DO Have a variable to track which screen is active.  The update function will use that variable to
-# decide which background is changing instead of hardcoding it.  This will remove some extra load functions.
+    def add_sprite(self, sprite: pygame.sprite):
+        """Add a singular sprite to the current list of active sprites."""
+        self._rendered_group.add(sprite)
+
+    def create_sprite(self, unit, size, pos):
+        """Creates a sprite then adds it to list of active sprites"""
+        unit.set_sprite(ss.Screen_Sprite(unit.get_name(), size, pos))
+        self.add_sprite(unit.get_sprite())
+
+    def remove_sprite(self, sprite: pygame.sprite):
+        self._rendered_group.remove(sprite)
+
+    def load_screen(self, window: str):
+        """Input the initial list of sprites meant to be present on screen."""
+        sprite_list = self._windows[window]
+        self._rendered_group.empty()
+        for sprite in sprite_list:
+            self._rendered_group.add(sprite)
+        return self._rendered_group
+
+    def set_background(self, background):
+        pass
