@@ -1,44 +1,50 @@
 import pygame
-# from images import Image_Collection as img_col
 import sys_info as sys
+from display import Display
+from assets import Image_Collection
 
+from windows.wdw_title import title_window
+from windows.wdw_guide import guide_window
+from windows.wdw_selection import selection_window
+from windows.wdw_highscores import highscores_window
 
 class Game():
     def __init__(self):
-        # Start Pygame Window
-        pygame.init()
-        self.display = pygame.display.set_mode((sys.screen_x, sys.screen_y))
-        pygame.display.set_caption(sys.caption)
-
-        # Load Graphical Windows
-        import screens  # This should go at top but current produces error if called before display init
-        import battle
-        self.screen = screens.Screens(self.display)
-        self.windows = screens.Objects(self.screen)
-        self.screen.update_windows(self.windows)
-        self.screen.load_screen("menu")
-        self.battle = battle.Battle(self.screen)
-        self.windows.selection[0].set_function(lambda: self.battle.start_combat())
-        self.battle.add_friendly(self.windows.primary_unit)  # This should not happen here
+        pygame.init()                               
         self.clock = pygame.time.Clock()
+        self.img_collection = Image_Collection(sys.img_dir)
+        self.display = Display(self.img_collection)
+        self.img_collection.load_directory()  
+        
+        # Create all windows 
+        # (Seems better to front-load this instead of spreading it out)
+        title_window(self.display, "title")
+        guide_window(self.display, "guide")
+        selection_window(self.display, "selection")
+        highscores_window(self.display, "highscores")
+
+        # Load the title window
+        self.display.change_window("title")
+        
 
     def run(self):
-        while True:
-            pressed = False
+        running = True
+        while running:
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    pressed = True
+                    self.display.get_clicked()
                 if event.type == pygame.QUIT:
-                    pygame.quit()
+                    running = False
+                    
 
             # Run Combat
-            self.battle.run_round()
+            #self.battle.run_round()
 
-            # Update sprites
-            self.screen.mouse_updates(pressed)
-            self.screen.update()
-
+            # Update the screen
+            self.display.update()
+            self.display.render_screen()
             self.clock.tick(sys.fps)
+        pygame.quit()
 
 def main():
     game = Game()
