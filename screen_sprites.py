@@ -75,13 +75,19 @@ class Toggle_Button(Button):
                     self.image = self._on
                     self._active = True
 
-class Text(Screen_Sprite):
+class Text(pg.sprite.Sprite):
     """Renders text objects to screen."""
     def __init__(self, msg, size, color, coords):
+        pg.sprite.Sprite.__init__(self)
         self.font = pg.font.Font(None, size)
         self.image = self.font.render(msg, 1, color)
         self.color = color
-        super().__init__(self.image, coords, size)
+        self.rect = self.image.get_rect().move(coords)
+        self.msg = msg
 
     def change_text(self, new_text):
-        self.image = self.font.render(new_text, 1, self.color)
+        self.msg = new_text
+        self.image = self.font.render(self.msg, 1, self.color)
+
+    def update(self, mouse, pressed):
+        self.image = self.font.render(self.msg, 0, self.color)
