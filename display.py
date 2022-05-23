@@ -39,8 +39,13 @@ class Display():
 
     def get_clicked(self):
         """Updates sprites that respond to mouse clicks."""
-        for sprite in self.active_group:
-            sprite.get_clicked()
+        # Check all sprites that have a get_clicked attribute
+        try:
+            for sprite in self.active_group:
+                sprite.get_clicked()
+        # Skip over them if they do not
+        except:
+            pass
 
     def update(self):
         self.active_group.update()

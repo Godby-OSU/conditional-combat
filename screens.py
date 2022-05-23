@@ -5,7 +5,7 @@
 Includes information required to manage visuals active on the current screen.
 """
 import sys_info as sys
-import sprite_classes as ss
+import sprites.sprite_classes as ss
 import pygame
 from units import create_friendly
 

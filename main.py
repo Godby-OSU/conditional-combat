@@ -2,11 +2,13 @@ import pygame
 import sys_info as sys
 from display import Display
 from assets import Image_Collection
+import sprites.sprite_lists as spl
 
-from windows.wdw_title import title_window
-from windows.wdw_guide import guide_window
-from windows.wdw_selection import selection_window
-from windows.wdw_highscores import highscores_window
+from windows.wdw_title import TitleWindow
+from windows.wdw_guide import GuideWindow
+from windows.wdw_selection import SelectionWindow
+from windows.wdw_highscores import HighscoresWindow
+from windows.wdw_battle import BattleWindow
 
 class Game():
     def __init__(self):
@@ -16,12 +18,17 @@ class Game():
         self.display = Display(self.img_collection)
         self.img_collection.load_directory()  
         
+        # Generate Sprite Groups
+        friendly_sprites = spl.FriendlySprites(self.display)
+        # enemy_sprites = spg.EnemySprites(self.display)
+        # reserve_sprites = spg.ReserveSprites(self.display)
+
         # Create all windows 
-        # (Seems better to front-load this instead of spreading it out)
-        title_window(self.display, "title")
-        guide_window(self.display, "guide")
-        selection_window(self.display, "selection")
-        highscores_window(self.display, "highscores")
+        TitleWindow(self.display, "title")
+        GuideWindow(self.display, "guide")
+        BattleWindow(self.display, "battle", friendly_sprites)
+        SelectionWindow(self.display, "selection", friendly_sprites)
+        HighscoresWindow(self.display, "highscores")
 
         # Load the title window
         self.display.change_window("title")
@@ -36,15 +43,13 @@ class Game():
                 if event.type == pygame.QUIT:
                     running = False
                     
-
-            # Run Combat
-            #self.battle.run_round()
-
             # Update the screen
             self.display.update()
             self.display.render_screen()
             self.clock.tick(sys.fps)
+
         pygame.quit()
+
 
 def main():
     game = Game()

@@ -3,7 +3,7 @@
 ################
 from windows.window import Window
 from sys_info import screen_x, screen_y
-import sprite_classes as spc
+import sprites.sprite_classes as spc
 import json
 """
 TODO: - This is an improvement but there are still some problems I'd like to change.
@@ -18,34 +18,15 @@ TODO: - This is an improvement but there are still some problems I'd like to cha
         (importing things mid function because of initialization order requirements)
 """
 # Window Information
-class title_window(Window):
+class TitleWindow(Window):
     def __init__(self, display, tag: str):
         super().__init__(display, tag)
         # Initial Sprites for this window
         menu_sprites = [
-            spc.Screen_Sprite(self.images, "title", (screen_x,200),(0,0)),
-            spc.Button(self.images, ("start_on", "start_off"), (400,150),(int(screen_x/2-200),200),  lambda: display.change_window("selection")),            
-            spc.Button(self.images, ("guide_on", "guide_off"), (200,75), (int(screen_x-200),int(screen_y-75)), lambda: display.change_window("guide")), 
-            spc.Button(self.images, ("scores_off", "scores_on"), (400,150), (int(screen_x/2-200),350), lambda: update_highscores())
+            spc.ScreenSprite(self.images, "title", (screen_x,200),(0,0)),
+            spc.Button(self.images, ("start_on", "start_off"), (400,150),(int(screen_x/2-200),200),  lambda: self._change_window("selection")),            
+            spc.Button(self.images, ("guide_on", "guide_off"), (200,75), (int(screen_x-200),int(screen_y-75)), lambda: self._change_window("guide")), 
+            spc.Button(self.images, ("scores_off", "scores_on"), (400,150), (int(screen_x/2-200),350), lambda: self._change_window("highscores"))
         ]     
-        self.bulk_add_sprites(menu_sprites)    
+        self._bulk_add_sprites(menu_sprites)    
 
-# Button Functions
-def update_highscores(display):
-    """Uses JSON file to generate a list of highscores."""
-    # Access JSON
-    with open('highscores.json', 'r') as read:
-        data = json.load(read)
-
-    # Update Highscores Table
-    for n in range(1,6):
-        try:
-            new_text = (n, '.)', ' ', data[str(n)][0], '  ---', ' ', 'Round: ', data[str(n)][1])
-            string = ''.join(map(str, new_text))    # https://www.geeksforgeeks.org/python-program-to-convert-a-tuple-to-a-string/
-            print(string)
-            self.highscores[n].change_text(string)
-        except:
-            pass
-
-    # Display the table
-    display.change_window("highscores")
