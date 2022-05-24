@@ -7,6 +7,8 @@ import sprites.sprite_classes as spc
 import time
 import json
 import sprites.stat_blocks as sb
+import sprites.unit_classes as Unit
+import sprites.stat_blocks as Stats
 
 
 class BattleWindow(Window):
@@ -17,9 +19,8 @@ class BattleWindow(Window):
         self._bulk_add_sprites(self.friendly_units)           # Adds friendly units from list to this window's sprite group
 
     def activate_window(self):
-        print("RUNNING")
         logic = BattleLogic(self, self.friendly_units) 
-        logic.run()
+        logic.run_logic()
 
 
 class BattleLogic():
@@ -33,15 +34,10 @@ class BattleLogic():
         self._combat = False
         self._round = 1
         self._wait = 1
+        self._num_enemies = 0 
 
-    def add_friendly(self, unit):
-        self._friendly_units.append(unit)
-
-    def add_enemy(self, unit):
-        self._inactive_enemies.append(unit)
-
-    def generate_enemies(self):
-        """Creates a string list of enemy types"""
+    def generate_encounter(self):
+        """Creates a list of all enemies used for this engagement"""
         print("Generating Enemies")
         remaining_points = self._round
         while remaining_points > 0:
@@ -50,29 +46,32 @@ class BattleLogic():
             remaining_points -= sb.enemy_info[enemy_type]["value"]           
         print("Generation completed.")
 
-    def add_enemy_sprites(self):
+    def spawn_enemy_sprites(self):
         """Creates enemy sprites and adds units to the display."""
-        print("Updating sprites list")
-        unit_x = 200
-        unit_y = 200
+        print("Spawning Enemies")
         pos_x = 0
         pos_y = 0
 
-        for unit in self._active_enemies:
-            self._screen.create_sprite(unit, (unit_x,unit_y), (pos_x,pos_y))
-            print("UNIT ADDED")
-            pos_x += unit_x
-
-        print("Completed: adding sprites to battle screen.")
+        while self._num_enemies != 4 and len(self._inactive_enemies) != 0:  # When less than 4 active and inactive enemies remain
+            for unit in self._inactive_enemies:
+                stats = Stats.enemy_info[unit]
+                image_dir = self.battle_window.images
+                new_enemy = Unit.EnemyUnit(image_dir, unit, (200,200), (pos_x,pos_y), stats)    # Generates a new enemy sprite
+                print("NEW ENEMY")
+                self._active_enemies.append(new_enemy)                                          # Adds new enemes
+                print("ACTIVE ADDED")
+                del self._inactive_enemies[0]                                                   # Deletes added unit from inactive list
+                pos_x += 200
+                self._num_enemies += 1
+                print("Unit Added")
+        print("Enemies Spawned.")
 
     def start_combat(self):
         print("Starting Combat")
-        self.generate_enemies()  # Create enemies in inactive list
-        num_enemies = 0
-        while num_enemies != 4 and len(self._inactive_enemies) != 0:  # Move up to 4 of those enemies into active
-            self._active_enemies.append(self._inactive_enemies[0])
-            del self._inactive_enemies[0]
-            num_enemies += 1
+        self.generate_encounter()  # Creates a list of al enemies to be used
+        self.spawn_enemy_sprites() # Creates the currently active enemy sprites.
+        self.battle_window._bulk_add_sprites(self._active_enemies)
+        self.battle_window._render_screen()
         self._combat = True
     
     def create_json(self):
@@ -157,4 +156,5 @@ class BattleLogic():
                 time.sleep(self._wait)
 
     def run_logic(self):
+        self.start_combat()
         self.run_round()

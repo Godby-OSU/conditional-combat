@@ -15,7 +15,8 @@ class Display():
         self.screen = pygame.display.set_mode(sys.screen_size)  # Start screen
         pygame.display.set_caption(sys.caption)                 # Set title for window
         self.img_col = image_collection                         # Save dictionary of all image assets
-        self.windows = {}                                       # Format {"tag": sprite_group}        
+        self.windows = {}                                       # Format {"tag": sprite_group} 
+        self.window_class = {}                                  # Format {"tag": window_class}       
         self.active_group = pygame.sprite.RenderUpdates()       # Active group is sprite sub-class that tracks updates
         self.background = pygame.Surface((sys.screen_size))     # Current background
 
@@ -29,9 +30,10 @@ class Display():
         for sprite in self.windows[tag]:        # Add sprites from the new group
             self.active_group.add(sprite)
 
-    def new_window(self, tag, sprite_group):
-        """Add new windows to list of sprite groups"""
+    def new_window(self, tag, sprite_group, window_class):
+        """Adds reference to window class and to its sprite group."""
         self.windows[tag] = sprite_group
+        self.window_class[tag] = window_class
 
     def insert_window(self, tag, new_sprite):
         """Add new sprite to specified window"""
