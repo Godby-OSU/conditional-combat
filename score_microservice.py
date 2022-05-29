@@ -2,8 +2,6 @@ import os
 import json
 import time
 
-print("RUNNING")
-
 def calculateHighScores():
 
     # read input and delete file

@@ -1,72 +1,100 @@
-from screens import Screens
-from units import create_enemy, Unit, Friendly_Unit
-import time
+from sprite_groups import battle_sprites, friendly_sprites, enemy_sprites, reserve_sprites
+from sprite_classes.units import EnemyUnit
+from stat_blocks import enemy_info
+from display import display
 import json
+import time
 
 class Battle():
-    """Tracks data from battle and updates the screen with new info."""
-    def __init__(self, screen: Screens):
-        self._screen = screen
-        self._friendly_units = []
-        self._active_enemies = []
-        self._inactive_enemies = []
-        self._combat = False
+    def __init__(self):
         self._round = 1
-        self._wait = 1
+        self._enemy_size = (200, 200)
+        # There can be a max of 4 specified enemies, each at a specified coordinate. 
+        self._active_enemies = [None, None, None, None]                        
+        self._pos_coords = {0: (0,0), 1: (200, 0), 2: (400, 0), 3: (600, 0)} 
 
-    def add_friendly(self, unit):
-        self._friendly_units.append(unit)
+    ####################
+    # Spawning Enemies 
+    ####################
+    def create_enemy(self, enemy_type: str):
+        """Creates an enemy sprite.  Stored in reserve group."""
+        new_sprite = EnemyUnit(enemy_type, self._enemy_size, (0,0), enemy_info[enemy_type])
+        reserve_sprites.add(new_sprite)
 
-    def add_enemy(self, unit):
-        self._inactive_enemies.append(unit)
-
-    def generate_enemies(self):
-        """Creates enemy units for current encounter."""
+    def generate_encounter(self):
+        """Creates a list of all enemies used for this combat."""
         print("Generating Enemies")
         remaining_points = self._round
         while remaining_points > 0:
-            self._inactive_enemies.append(create_enemy("slime"))
+            enemy_type = "slime" # If using more than one enemy type this could vary
+            self.create_enemy(enemy_type)
             remaining_points -= 1
-        print("Generation completed.")
+        print(reserve_sprites)
+        print("====Generation completed.====")
 
-    def update_screen(self):
-        """Adds units to the display."""
-        print("Updating sprites list")
-        unit_x = 200
-        unit_y = 200
-        pos_x = 0
-        pos_y = 0
+    def transfer_sprite(self):
+        """Transfers a single enemy sprite from reserve to active sprite group.
+        Groups are unordered and have no specific name, thus a for loop is used to grab any sprite."""
+        for sprite in reserve_sprites:
+            reserve_sprites.remove(sprite)
+            enemy_sprites.add(sprite)
+            battle_sprites.add(sprite)                          # Battle sprites is what is being rendered
+            return sprite
 
-        for unit in self._active_enemies:
-            self._screen.create_sprite(unit, (unit_x,unit_y), (pos_x,pos_y))
-            print("UNIT ADDED")
-            pos_x += unit_x
+    def spawn_enemy(self):
+        """Moves a sprite from reserve to the active enemy list."""
+        position = 0
+        for space in self._active_enemies:                      # Active enemy list has 4 spots                      
+            if space is None:                                   # Empty slots indicated by None
+                sprite = self.transfer_sprite()                 # Move that sprite to the active group
+                sprite.set_pos(self._pos_coords[position])      # Sprite's coords depends on position in list
+                self._active_enemies[position] = sprite         # Put a reference to the sprite the enemy list
+                break
+            else:
+                position += 1
 
-        for unit in self._friendly_units:
-            # self._screen.create_sprite(unit, (unit_x, unit_y), (500,300))
-            # This function is not working.  Not worth fixing because 
-            # Sprites need refactored entirely anyway.
-            sprite = unit.get_sprite()
-            sprite.set_pos((500,300))
-
-        print("Completed: adding sprites to battle screen.")
+    def spawn_ally(self):
+        """Moves ally units to the rendered list"""
+        for ally in friendly_sprites:
+            battle_sprites.add(ally)
 
     def start_combat(self):
-        print("Starting Combat")
-        self.generate_enemies()  # Create enemies in inactive list
-        num_enemies = 0
-        while num_enemies != 4 and len(self._inactive_enemies) != 0:  # Move up to 4 of those enemies into active
-            self._active_enemies.append(self._inactive_enemies[0])
-            del self._inactive_enemies[0]
-            num_enemies += 1
-        self._screen.load_screen("battle")      # This clears screen
-        self.update_screen()                    # This adds to screen after it is cleared
-        self._combat = True
-    
-    def set_round(self, round):
-        self._round = round
+        """Prepares the initial combat state"""
+        self.generate_encounter()       # Create all enemy sprites
+        # If there are empty spaces and enemies remaining in reserve
+        print(self._active_enemies)
+        print(reserve_sprites)
+        while None in self._active_enemies and reserve_sprites:
+            self.spawn_enemy()
+            print("==========================================================SPAWNED")
+        self.spawn_ally()
+        display.change_window("battle")
+        print(display.window)
+
+    ####################
+    # Processing Knockouts
+    ####################
+    def null_index(self, target):
+        """Removes target from index and replaces it with None."""
+        index = 0
+        for enemy in self._active_enemies:
+            if enemy == target:
+                break
+            else: index += 1
+        self._active_enemies[index] = None
+
+    def enemy_knockout(self):
+        """Check if enemy is knocked out and process results."""
+        for target in self._active_enemies:
+            if target is not None:
+                print(target)
+                if not target.check_pulse():
+                    print(target.get_name(), "goes down.")
+                    target.kill()
+                    self.null_index(target)
 
     def create_json(self):
+        """Create highscores JSON entry for microservice to access"""
         print("Please enter name")
         name = input()
         data = {
@@ -75,77 +103,98 @@ class Battle():
         with open('gameover.json', 'w') as test:
             json.dump(data, test)
 
+    def ally_knockout(self, target):
+        """Check if ally is knocked out and process results"""
+        print("CHECK")
+        if not target.check_pulse():
+            print("Game Over")
+            self.create_json()
+            display.change_window("title")
 
-
-    def process_damage(self, attacker: Unit, target: Unit):
-        """Applies damage from attacker to the target."""
-        print("Attacking", target.get_name())
-        time.sleep(self._wait)
+    ####################
+    # Processing Attacks
+    ####################   
+    def process_damage(self, attacker, target):
+        """Applies damage from attacker to target."""
         damage = attacker.get_damage()
         target.take_damage(damage)
         print(target.get_name(), "takes", damage, "damage.")
-        time.sleep(self._wait)
 
-    def process_death(self, target: Unit, enemy: bool):
-        """ Checks if unit has been defeated.  
-        Removes defeated enemy unit.  Game Over if ally defeated."""
-        if not target.check_pulse():
-            print(target.get_name(), "goes down.")
-            time.sleep(self._wait)
-            if enemy:
-                self._active_enemies.remove(target)
-                self._screen.remove_sprite(target)
-            else:
-                print("Game Over")
-                self.create_json()
-                self._combat = False
-                self._screen.load_screen("menu")
 
-    def process_attack(self, attacker: Unit):
-        """Processing the attack phase for a single unit regardless of faction."""
-        # Determine if friendly or enemy unit attacking.
-        targets = self._friendly_units
-        aoe = False
-        enemy_bool = False
-        if isinstance(attacker, Friendly_Unit):
-            aoe = attacker.get_aoe()  # Only friendly units have aoe currently. 
-            targets = self._active_enemies
-            enemy_bool = True
-
-        # Process the damage and check if target still alive
-        if aoe:
-            print("Attacking multiple targets...")
-            for target in targets:
-                self.process_damage(attacker, target)
-                self.process_death(target, enemy_bool)       
-        else:
-            target = targets[0]
+    def ally_attack(self, attacker):
+        """Conducts an attack made by an ally unit"""
+        aoe = attacker.get_aoe()
+        # Start by targeting all active enemies
+        for target in self._active_enemies:
             self.process_damage(attacker, target)
-            self.process_death(target, enemy_bool)    
+            # If it's not an aoe, stop after the first attack
+            if not aoe:
+                break
 
-    def run_round(self):
-        """Processes an entire round of combat."""
-        if self._combat:
-            print("=======================")
-            print("There are", len(self._active_enemies), "here,")
-            print("and", len(self._inactive_enemies), "in reserve.")
-            print(self._friendly_units[0].get_health(), "health remaining")
-            print("=======================")
+    def enemy_attack(self, attacker):
+        """Conducts an attack made by an enemy."""
+        # Groups are unsorted.  Since there is only one ally, a for loop still works.
+        for ally in friendly_sprites:
+            self.process_damage(attacker, ally)
 
 
-            for unit in self._friendly_units:
-                self.process_attack(unit)
-                print("")
+    def execute_attack(self, attacker):
+        """Executes an attack based on unit's faction."""
+        faction = attacker.get_faction()
+        if faction == "ally":
+            self.ally_attack(attacker)
+            self.enemy_knockout()
+        else:
+            self.enemy_attack(attacker)
+            self.ally_knockout()
+
+    ####################
+    # Processing Combat
+    ####################
+    def next_wave(self):
+        """Spawns more enemies if there are enemies in reserve and empty spots available.""" 
+        while None in self._active_enemies:
+            if reserve_sprites:
+                self.spawn_enemy()
+            else:
+                return
+
+    def round_end(self):
+        """Checks if round is over and returns to selection if yes."""
+        if not enemy_sprites:
+            print("Round Over")
+            self._round += 1
+            display.change_window("selection")
+
+    def battle_update(self):
+        """Provides update on battle stats in console."""
+        for sprite in friendly_sprites:
+            hitpoints = sprite.get_health()
+        print("=======================")
+        print("There are", len(enemy_sprites), "here,")
+        print("and", len(reserve_sprites), "in reserve.")
+        print(hitpoints, "health remaining")
+        print(self._active_enemies)
+        print("=======================")
+
+
+    def execute_battle(self):
+        """Command that starts the battle sequence when a button is pressed."""
+        self.start_combat()
+        display.render_screen()
+        time.sleep(1)
+        while display.window == "battle":
+            self.battle_update()
+
+            for unit in friendly_sprites:
+                self.execute_attack(unit)
+            time.sleep(.5)
             for unit in self._active_enemies:
-                self.process_attack(unit)
-                print("")
+                if unit is not None:
+                    self.execute_attack(unit)
+            time.sleep(.5)
 
-            if len(self._active_enemies) == 0 and len(self._inactive_enemies) == 0:
-                print("Round Over")
-                time.sleep(self._wait)
-                self._round += 1
-                self._combat = False
-                self._screen.load_screen("selection")
+            self.next_wave()    # Spawns new enemies
+            self.round_end()    # Ends round if all enemies exhausted.
 
-            if self._combat:
-                time.sleep(self._wait)
+battle = Battle()
