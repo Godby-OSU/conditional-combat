@@ -42,6 +42,10 @@ class Unit(BaseSprite):
             return False
         else: return True
 
+    def reset_health(self):
+        self._current_hitpoints = self._hitpoints
+
+
 class FriendlyUnit(Unit):
     def __init__(self, image_name, size, coords, stat_block):
         super().__init__(image_name, size, coords, stat_block)

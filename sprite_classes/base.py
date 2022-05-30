@@ -16,7 +16,10 @@ class BaseSprite(pg.sprite.Sprite):
 
     def set_pos(self, pos):
         self._coords = pos
-        self.rect.move(pos)
+        self.rect.move_ip(pos)
+
+    def get_coords(self):
+        return self._coords
 
     def get_clicked(self):
         """All sprites need this attribute regardless of if used."""
