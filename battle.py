@@ -11,7 +11,7 @@ class Battle():
         self._enemy_size = (200, 200)
         # There can be a max of 4 specified enemies, each at a specified coordinate. 
         self._active_enemies = [None, None, None, None]                        
-        self._pos_coords = {0: (0,0), 1: (200, 0), 2: (400, 0), 3: (600, 0)} 
+        self._pos_coords = [(0,0), (200, 0), (400, 0), (600, 0)]
 
     ####################
     # Spawning Enemies 
@@ -29,7 +29,6 @@ class Battle():
             enemy_type = "slime" # If using more than one enemy type this could vary
             self.create_enemy(enemy_type)
             remaining_points -= 1
-        print(reserve_sprites)
         print("====Generation completed.====")
 
     def transfer_sprite(self):
@@ -46,8 +45,10 @@ class Battle():
         position = 0
         for space in self._active_enemies:                      # Active enemy list has 4 spots                      
             if space is None:                                   # Empty slots indicated by None
+                print("==========================================================SPAWN")
                 sprite = self.transfer_sprite()                 # Move that sprite to the active group
                 sprite.set_pos(self._pos_coords[position])      # Sprite's coords depends on position in list
+                print("CONFIRM", sprite.get_coords())
                 self._active_enemies[position] = sprite         # Put a reference to the sprite the enemy list
                 break
             else:
@@ -62,14 +63,11 @@ class Battle():
         """Prepares the initial combat state"""
         self.generate_encounter()       # Create all enemy sprites
         # If there are empty spaces and enemies remaining in reserve
-        print(self._active_enemies)
-        print(reserve_sprites)
         while None in self._active_enemies and reserve_sprites:
             self.spawn_enemy()
             print("==========================================================SPAWNED")
         self.spawn_ally()
         display.change_window("battle")
-        print(display.window)
 
     ####################
     # Processing Knockouts
@@ -87,7 +85,6 @@ class Battle():
         """Check if enemy is knocked out and process results."""
         for target in self._active_enemies:
             if target is not None:
-                print(target)
                 if not target.check_pulse():
                     print(target.get_name(), "goes down.")
                     target.kill()
@@ -103,13 +100,15 @@ class Battle():
         with open('gameover.json', 'w') as test:
             json.dump(data, test)
 
-    def ally_knockout(self, target):
+    def ally_knockout(self):
         """Check if ally is knocked out and process results"""
-        print("CHECK")
-        if not target.check_pulse():
-            print("Game Over")
-            self.create_json()
-            display.change_window("title")
+        for ally in friendly_sprites:
+            if not ally.check_pulse():
+                print("Game Over")
+                self.create_json()
+                self._round = 1
+                ally.reset_hitpoints()
+                display.change_window("title")
 
     ####################
     # Processing Attacks
@@ -126,10 +125,12 @@ class Battle():
         aoe = attacker.get_aoe()
         # Start by targeting all active enemies
         for target in self._active_enemies:
-            self.process_damage(attacker, target)
-            # If it's not an aoe, stop after the first attack
-            if not aoe:
-                break
+            # If it's not None
+            if target:
+                self.process_damage(attacker, target)
+                # If it's not an aoe, stop after the first attack
+                if not aoe:
+                    break
 
     def enemy_attack(self, attacker):
         """Conducts an attack made by an enemy."""
@@ -147,6 +148,7 @@ class Battle():
         else:
             self.enemy_attack(attacker)
             self.ally_knockout()
+
 
     ####################
     # Processing Combat
@@ -187,14 +189,17 @@ class Battle():
             self.battle_update()
 
             for unit in friendly_sprites:
+                print("FRIENDLY ATTACK")
                 self.execute_attack(unit)
             time.sleep(.5)
             for unit in self._active_enemies:
                 if unit is not None:
                     self.execute_attack(unit)
+                    print("ENEMY ATTACK OVER")
             time.sleep(.5)
 
             self.next_wave()    # Spawns new enemies
+            print("NEW WAVE")
             self.round_end()    # Ends round if all enemies exhausted.
 
 battle = Battle()
